@@ -46,16 +46,17 @@ struct RateWindow {
 }
 
 pub fn poll(config: &Config) -> Reading {
+    let ui = crate::i18n::s();
     let Some(path) = auth_path(config) else {
-        return error("Нет пути к auth.json", State::Missing);
+        return error(ui.credentials_missing, State::Missing);
     };
     let text = match std::fs::read_to_string(&path) {
         Ok(text) => text,
-        Err(_) => return error(format!("Нет входа Codex: {}", path.display()), State::Missing),
+        Err(_) => return error(format!("ChatGPT: {}", ui.credentials_missing), State::Missing),
     };
     let auth: AuthFile = match serde_json::from_str(&text) {
         Ok(auth) => auth,
-        Err(_) => return error("Не удалось прочитать auth.json", State::Error),
+        Err(_) => return error(ui.parse_failed, State::Error),
     };
 
     let Some(tokens) = auth.tokens else {
@@ -65,9 +66,9 @@ pub fn poll(config: &Config) -> Reading {
             .map(|value| !value.trim().is_empty())
             .unwrap_or(false)
         {
-            return error("API-ключ: остаток OpenAI не отдаётся", State::Missing);
+            return error(ui.not_supported, State::Missing);
         }
-        return error("Нет входа Codex — запустите codex login", State::Auth);
+        return error(format!("{} — codex login", ui.login_required), State::Auth);
     };
     let Some(access_token) = tokens
         .access_token
@@ -75,7 +76,7 @@ pub fn poll(config: &Config) -> Reading {
         .map(str::trim)
         .filter(|value| !value.is_empty())
     else {
-        return error("Нет входа Codex — запустите codex login", State::Auth);
+        return error(format!("{} — codex login", ui.login_required), State::Auth);
     };
 
     let account_id = tokens
@@ -103,13 +104,10 @@ pub fn poll(config: &Config) -> Reading {
         Err(PollError::Auth) => match node_usage(access_token, account_id.as_deref()) {
             Ok(response) => response,
             Err(()) => {
-                return error(
-                    "Cloudflare отклонил запрос ChatGPT; откройте Codex или повторите позже",
-                    State::Error,
-                );
+                return error(ui.request_failed, State::Error);
             }
         },
-        Err(_) => return error("Не удалось запросить лимиты ChatGPT", State::Error),
+        Err(_) => return error(ui.request_failed, State::Error),
     };
 
     let plan = response
@@ -124,7 +122,7 @@ pub fn poll(config: &Config) -> Reading {
     };
     let rate = match response.rate_limit {
         Some(rate) => rate,
-        None => return error("ChatGPT не вернул лимиты", State::Error),
+        None => return error(ui.no_limits, State::Error),
     };
     let limit_reached = rate.limit_reached.unwrap_or(false);
 
@@ -142,7 +140,7 @@ pub fn poll(config: &Config) -> Reading {
     }
 
     if windows.is_empty() {
-        return error("ChatGPT не вернул ни одного окна лимита", State::Error);
+        return error(ui.no_limits, State::Error);
     }
 
     let selected = select_window(&windows, &config.providers.chatgpt.window)

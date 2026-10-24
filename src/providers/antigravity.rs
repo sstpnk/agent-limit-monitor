@@ -28,15 +28,16 @@ struct TokenData {
 }
 
 pub fn poll(_config: &Config) -> Reading {
+    let ui = crate::i18n::s();
     let Some(content) = crate::credentials::read_generic(CREDENTIAL_TARGET) else {
-        return error("Нет входа Antigravity", State::Missing);
+        return error(ui.credentials_missing, State::Missing);
     };
     let auth: AuthFile = match serde_json::from_str(&content) {
         Ok(auth) => auth,
-        Err(_) => return error("Не удалось разобрать вход Antigravity", State::Error),
+        Err(_) => return error(ui.parse_failed, State::Error),
     };
     let Some(token) = auth.token.access_token.filter(|token| !token.trim().is_empty()) else {
-        return error("Нет токена Antigravity", State::Missing);
+        return error(ui.credentials_missing, State::Missing);
     };
     if auth
         .token
@@ -45,17 +46,17 @@ pub fn poll(_config: &Config) -> Reading {
         .and_then(parse_iso8601)
         .is_some_and(|expiry| expiry <= SystemTime::now())
     {
-        return error("Токен Antigravity истёк — откройте Antigravity", State::Auth);
+        return error(format!("{} — Antigravity", ui.token_expired), State::Auth);
     }
 
-    let mut last_error = "Antigravity не вернул лимиты";
+    let mut last_error = ui.no_limits;
     for base in ENDPOINTS {
         match fetch_from(base, &token) {
             Ok(reading) => return reading,
             Err(PollError::Auth) => {
-                return error("Требуется вход Antigravity", State::Auth);
+                return error(ui.login_required, State::Auth);
             }
-            Err(_) => last_error = "Не удалось запросить лимиты Antigravity",
+            Err(_) => last_error = ui.request_failed,
         }
     }
     error(last_error, State::Error)

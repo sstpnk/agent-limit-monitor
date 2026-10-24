@@ -49,7 +49,6 @@ const IDM_FREQ_2MIN: u16 = 14;
 const IDM_FREQ_5MIN: u16 = 11;
 const IDM_FREQ_15MIN: u16 = 12;
 const IDM_FREQ_1HOUR: u16 = 13;
-const IDM_VERSION: u16 = 30;
 const IDM_UPDATE_CHECK: u16 = 31;
 const IDM_RESET_POSITION: u16 = 32;
 const IDM_AUTOSTART: u16 = 33;
@@ -1908,12 +1907,11 @@ fn show_context_menu(hwnd: HWND) {
         append_submenu(menu, models_menu, ui.models);
 
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_UPDATE_CHECK, ui.update_app);
         append_menu(
             menu,
             MENU_ITEM_FLAGS(0),
-            IDM_VERSION,
-            &format!("{} {}", ui.version, env!("CARGO_PKG_VERSION")),
+            IDM_UPDATE_CHECK,
+            &format!("{} (v {})", ui.update_app, env!("CARGO_PKG_VERSION")),
         );
 
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
@@ -2012,7 +2010,7 @@ fn handle_menu_command(hwnd: HWND, id: u16) {
         IDM_MODEL_CLAUDE => toggle_provider(hwnd, ProviderId::Claude),
         IDM_MODEL_ANTIGRAVITY => toggle_provider(hwnd, ProviderId::Antigravity),
         IDM_MODEL_COPILOT => toggle_provider(hwnd, ProviderId::Copilot),
-        IDM_UPDATE_CHECK | IDM_VERSION => check_updates(hwnd),
+        IDM_UPDATE_CHECK => check_updates(hwnd),
         IDM_AUTOSTART => toggle_autostart(hwnd),
         IDM_LANG_SYSTEM => set_language(hwnd, "system"),
         IDM_LANG_EN => set_language(hwnd, "en"),

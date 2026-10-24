@@ -27,8 +27,9 @@ struct CopilotResponse {
 }
 
 pub fn poll(_config: &Config) -> Reading {
+    let ui = crate::i18n::s();
     let Some(token) = token_candidates().into_iter().next() else {
-        return error("Нет входа GitHub Copilot");
+        return error(ui.credentials_missing);
     };
     let headers = [
         ("Authorization", format!("token {token}")),
@@ -41,8 +42,8 @@ pub fn poll(_config: &Config) -> Reading {
         .collect();
     let response: CopilotResponse = match http::get_json(USER_URL, &header_refs) {
         Ok(response) => response,
-        Err(PollError::Auth) => return error("Требуется вход GitHub Copilot"),
-        Err(_) => return error("Не удалось запросить лимиты Copilot"),
+        Err(PollError::Auth) => return error(ui.login_required),
+        Err(_) => return error(ui.request_failed),
     };
 
     let reset = response
@@ -115,7 +116,7 @@ pub fn poll(_config: &Config) -> Reading {
     }
 
     let Some((_label, remaining, exhausted)) = selected else {
-        return error("Copilot не вернул квоты");
+        return error(ui.no_limits);
     };
     let state = if exhausted {
         State::Critical

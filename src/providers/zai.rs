@@ -145,16 +145,14 @@ static TRACE_COUNTER: AtomicU64 = AtomicU64::new(1);
 const LEDGER_CACHE_TTL: Duration = Duration::from_secs(3600);
 
 pub fn poll(config: &Config) -> Reading {
+    let ui = crate::i18n::s();
     let Some(root) = auto_claw_root() else {
-        return error(
-            "AutoClaw не найден — установите и войдите в приложение",
-            "Z.AI AutoClaw",
-        );
+        return error(ui.credentials_missing, "Z.AI AutoClaw");
     };
 
     let token = match read_token(&root, config) {
         Ok(token) => token,
-        Err(message) => return error(message, "Z.AI AutoClaw"),
+        Err(_) => return error(ui.login_required, "Z.AI AutoClaw"),
     };
 
     let headers = signed_headers(Some(&token.access_token));
@@ -166,15 +164,15 @@ pub fn poll(config: &Config) -> Reading {
     let response: WalletResponse = match http::get_json(WALLET_URL, &header_refs) {
         Ok(response) => response,
         Err(PollError::Auth) => {
-            return error("Токен не принят — откройте AutoClaw", "Z.AI AutoClaw");
+            return error(ui.login_required, "Z.AI AutoClaw");
         }
-        Err(_) => return error("Не удалось запросить кредиты Z.AI", "Z.AI AutoClaw"),
+        Err(_) => return error(ui.request_failed, "Z.AI AutoClaw"),
     };
     if response.code != 0 {
-        return error("Z.AI вернул ошибку кошелька", "Z.AI AutoClaw");
+        return error(ui.request_failed, "Z.AI AutoClaw");
     }
     let Some(data) = response.data else {
-        return error("Z.AI не вернул кошелёк", "Z.AI AutoClaw");
+        return error(ui.no_limits, "Z.AI AutoClaw");
     };
 
     let total = data.total_balance.max(0) as u64;

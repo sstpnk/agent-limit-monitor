@@ -48,6 +48,7 @@ struct PlatformWallet {
 }
 
 pub fn poll(config: &Config) -> Reading {
+    let ui = crate::i18n::s();
     if config.providers.deepseek.use_platform_token {
         if let Some(token) = platform_token() {
             match fetch_platform(&token) {
@@ -58,7 +59,10 @@ pub fn poll(config: &Config) -> Reading {
     }
 
     let Some(key) = config.deepseek_key() else {
-        return error("Ключ не задан: DEEPSEEK_API_KEY или вход в DeepSeek Harness");
+        return error(format!(
+            "{} (DEEPSEEK_API_KEY / DeepSeek Harness)",
+            ui.api_key_required
+        ));
     };
     fetch_official(config, &key)
 }
@@ -154,6 +158,7 @@ fn wallet_total(wallets: &[PlatformWallet], currency: &str) -> i64 {
 }
 
 fn fetch_official(config: &Config, key: &str) -> Reading {
+    let ui = crate::i18n::s();
     let headers = [
         ("Authorization", format!("Bearer {key}")),
         ("Accept", "application/json".to_string()),
@@ -165,8 +170,8 @@ fn fetch_official(config: &Config, key: &str) -> Reading {
 
     let response: BalanceResponse = match http::get_json(BALANCE_URL, &header_refs) {
         Ok(response) => response,
-        Err(PollError::Auth) => return error("Ключ DeepSeek не принят"),
-        Err(_) => return error("Не удалось запросить баланс DeepSeek"),
+        Err(PollError::Auth) => return error(ui.api_key_rejected),
+        Err(_) => return error(ui.request_failed),
     };
 
     let preferred = config.providers.deepseek.currency.trim().to_ascii_uppercase();
@@ -190,7 +195,7 @@ fn fetch_official(config: &Config, key: &str) -> Reading {
         .or_else(|| response.balance_infos.first());
 
     let Some(info) = info else {
-        return error("DeepSeek не вернул баланс");
+        return error(ui.balance_unavailable);
     };
     let currency = info
         .currency
@@ -206,7 +211,7 @@ fn fetch_official(config: &Config, key: &str) -> Reading {
         (Some(topped), Some(granted)) => topped + granted,
         _ => match total {
             Some(total) => total,
-            None => return error("Не удалось разобрать баланс DeepSeek"),
+            None => return error(ui.parse_failed),
         },
     };
 

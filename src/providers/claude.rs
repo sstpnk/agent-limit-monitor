@@ -39,29 +39,30 @@ struct Bucket {
 }
 
 pub fn poll(config: &Config) -> Reading {
+    let ui = crate::i18n::s();
     let path = match credential_path(config) {
         Some(path) => path,
-        None => return error("Не найден вход Claude Code", State::Missing),
+        None => return error(ui.credentials_missing, State::Missing),
     };
     let content = match std::fs::read_to_string(&path) {
         Ok(content) => content,
-        Err(_) => return error("Не найден вход Claude Code", State::Missing),
+        Err(_) => return error(ui.credentials_missing, State::Missing),
     };
     let auth: AuthFile = match serde_json::from_str(&content) {
         Ok(auth) => auth,
-        Err(_) => return error("Не удалось разобрать вход Claude Code", State::Error),
+        Err(_) => return error(ui.parse_failed, State::Error),
     };
     let Some(oauth) = auth.oauth else {
-        return error("Нет OAuth-токена Claude Code", State::Missing);
+        return error(ui.credentials_missing, State::Missing);
     };
     let Some(token) = oauth.access_token.filter(|token| !token.trim().is_empty()) else {
-        return error("Нет OAuth-токена Claude Code", State::Missing);
+        return error(ui.credentials_missing, State::Missing);
     };
     if oauth
         .expires_at
         .is_some_and(|expires| expires <= crate::format::now_unix() * 1000)
     {
-        return error("Токен Claude Code истёк — запустите claude", State::Auth);
+        return error(format!("{} — claude", ui.token_expired), State::Auth);
     }
 
     let headers = [
@@ -76,9 +77,9 @@ pub fn poll(config: &Config) -> Reading {
     let response: UsageResponse = match http::get_json(USAGE_URL, &header_refs) {
         Ok(response) => response,
         Err(PollError::Auth) => {
-            return error("Требуется вход Claude Code", State::Auth);
+            return error(ui.login_required, State::Auth);
         }
-        Err(_) => return error("Не удалось запросить лимиты Claude Code", State::Error),
+        Err(_) => return error(ui.request_failed, State::Error),
     };
 
     let mut windows = Vec::new();
@@ -97,7 +98,7 @@ pub fn poll(config: &Config) -> Reading {
         );
     }
     if windows.is_empty() {
-        return error("Claude Code не вернул лимиты", State::Error);
+        return error(ui.no_limits, State::Error);
     }
 
     let now = SystemTime::now();
