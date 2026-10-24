@@ -1,11 +1,11 @@
 [package]
 name = "agent-limit-monitor"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
-description = "Compact desktop monitor for ChatGPT, Z.AI AutoClaw and DeepSeek limits"
-homepage = "https://github.com/sstpnk/Claude-Code-Usage-Monitor"
-repository = "https://github.com/sstpnk/Claude-Code-Usage-Monitor"
+description = "Compact Windows taskbar widget for ChatGPT, Z.AI, DeepSeek, Claude, Antigravity and Copilot limits"
+homepage = "https://github.com/sstpnk/agent-limit-monitor"
+repository = "https://github.com/sstpnk/agent-limit-monitor"
 
 [package.metadata.winres]
 CompanyName = "Sergey Stepanyuk"

@@ -240,35 +240,35 @@ fn balance_detail(
     let mut detail = Vec::new();
     if let Some(normal) = normal {
         detail.push(DetailLine {
-            label: "Пополнено".to_string(),
+            label: crate::i18n::s().topped_up.to_string(),
             value: format_money(normal, currency),
             reset: None,
         });
     }
     if let Some(bonus) = bonus {
         detail.push(DetailLine {
-            label: "Бонус".to_string(),
+            label: crate::i18n::s().bonus.to_string(),
             value: format_money(bonus, currency),
             reset: None,
         });
     }
     if normal.is_some() && bonus.is_some() {
         detail.push(DetailLine {
-            label: "Итого".to_string(),
+            label: crate::i18n::s().total.to_string(),
             value: format_money(cents, currency),
             reset: None,
         });
     } else if normal.is_none() && bonus.is_none() {
         detail.push(DetailLine {
-            label: "Баланс".to_string(),
+            label: crate::i18n::s().balance.to_string(),
             value: format_money(cents, currency),
             reset: None,
         });
     }
     if !available {
         detail.push(DetailLine {
-            label: "Статус".to_string(),
-            value: "недостаточно средств".to_string(),
+            label: crate::i18n::s().status.to_string(),
+            value: crate::i18n::s().insufficient.to_string(),
             reset: None,
         });
     }

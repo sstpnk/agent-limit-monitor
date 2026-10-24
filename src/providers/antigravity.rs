@@ -199,9 +199,9 @@ fn reading_from_windows(windows: Vec<WindowInfo>) -> Option<Reading> {
         detail.push(DetailLine {
             label: window.label.clone(),
             value: if window.limit_reached {
-                "0% · лимит".to_string()
+                format!("0% · {}", crate::i18n::s().limit)
             } else {
-                format!("осталось {}", format_percent(window.remaining))
+                format!("{} {}", crate::i18n::s().remaining, format_percent(window.remaining))
             },
             reset: format_reset_detail(window.reset_at),
         });

@@ -29,15 +29,15 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 
 ## Размер
 
-- exe: **949 КБ**
-- private bytes: ~3,4 МБ, working set: ~21 МБ (замер на Windows 11, 100% DPI)
+- exe: **962 КБ**
+- private bytes: ~3,5 МБ, working set: ~21 МБ (замер на Windows 11, 100% DPI)
 - высота виджета 42 px, ширина считается по фактическим значениям; при >3 включённых моделях — две колонки
-- шрифт Segoe UI Variable Text 11 px
+- шрифт Segoe UI Variable Text 11 px; для 中文 — Microsoft YaHei UI, для हिन्दी — Nirmala UI
 - один фоновый поток опроса, без egui/WebView/тем
 
 ## Скачать
 
-Готовый exe: [Releases v0.1.0](https://github.com/sstpnk/agent-limit-monitor/releases/tag/v0.1.0).
+Готовый exe: [Releases v0.1.1](https://github.com/sstpnk/agent-limit-monitor/releases/tag/v0.1.1).
 
 ## Запуск
 
@@ -53,10 +53,12 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 ```
 
 - Левый клик по tray-иконке — показать/скрыть виджет.
-- Правый клик — **Обновить**, **Частота обновления** (1/2/5/15/60 минут), **Модели** (ChatGPT, Z.AI, DeepSeek, Claude Code, Antigravity, GitHub Copilot), **Обновить приложение**, **Версия**, **Сбросить позицию**, **Выход**.
+- Правый клик — **Обновить**, **Частота обновления** (1/2/5/15/60 минут), **Модели** (ChatGPT, Z.AI, DeepSeek, Claude Code, Antigravity, GitHub Copilot), **Обновить приложение**, **Версия**, **Запуск вместе с Windows**, **Язык**, **Сбросить позицию**, **Выход**.
 - Виджет встраивается в taskbar слева от области уведомлений; перетаскивается за левую полоску, позиция сохраняется.
 - Если Windows не разрешает `SetParent` в taskbar (например, ограниченный токен), включается taskbar-overlay: то же место, тот же вид, тоже перетаскивается.
 - **Обновить приложение** проверяет GitHub Releases (при блокировке API — через Node.js), скачивает exe, заменяет текущий и перезапускает приложение.
+- **Запуск вместе с Windows** добавляет/удаляет значение `AgentLimitMonitor` в `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`.
+- **Язык** — системный или один из: English, 简体中文, Español, हिन्दी, Français, Русский; выбор сохраняется в конфиг.
 
 ## Конфигурация
 
@@ -64,6 +66,7 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 
 ```json
 {
+  "language": "system",
   "poll_interval_secs": 120,
   "display": { "labels": "full", "dock": "taskbar", "compact": false },
   "position": { "taskbar_index": 0, "offset": 0 }
@@ -74,6 +77,7 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 
 Основные поля:
 
+- `language` — `system` или `en`, `zh`, `es`, `hi`, `fr`, `ru`;
 - `providers.chatgpt.enabled` — показывать ChatGPT;
 - `providers.zai.refresh_token` — `false` по умолчанию; `true` разрешает приложению обновлять OAuth-токен AutoClaw и хранить его в DPAPI-файле `%APPDATA%\AgentLimitMonitor\zai-token.bin`;
 - `providers.deepseek.api_key_env` — имя переменной окружения (по умолчанию `DEEPSEEK_API_KEY`); ключ в конфиг не записывается;
@@ -121,6 +125,14 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 ### API-ключ ChatGPT
 
 Если в `auth.json` нет OAuth-токенов, а только `OPENAI_API_KEY`, это не free/Plus, а обычный API-ключ. Публичного остатка для него нет, поэтому строка показывает `—`. Для API-токенов используйте DeepSeek-провайдер или отдельный учёт.
+
+### Языки
+
+Меню и подписи виджета переведены на топ-5 мировых языков: English, 简体中文, Español, हिन्दी, Français, плюс Русский. «Системный по умолчанию» выбирает язык Windows. Выбор хранится в `language` и применяется сразу, без перезапуска.
+
+### Автозапуск
+
+Пункт **Запуск вместе с Windows** работает через `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`; путь всегда указывает на текущий exe. Включение/выключение не требует прав администратора.
 
 ## Сборка
 

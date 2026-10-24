@@ -14,9 +14,11 @@ use windows::Win32::UI::Input::KeyboardAndMouse::{
 use windows::Win32::UI::Shell::ExtractIconExW;
 use windows::Win32::UI::WindowsAndMessaging::*;
 
+use crate::autostart;
 use crate::config::{self, Config};
 use crate::diagnose;
 use crate::format::{row_reset, row_value};
+use crate::i18n::{self, Lang};
 use crate::models::{ProviderId, Reading, State};
 use crate::native_interop::{
     self, Color, TIMER_COUNTDOWN, TIMER_POLL, TIMER_RESET_POLL, WM_APP_TRAY,
@@ -50,6 +52,14 @@ const IDM_FREQ_1HOUR: u16 = 13;
 const IDM_VERSION: u16 = 30;
 const IDM_UPDATE_CHECK: u16 = 31;
 const IDM_RESET_POSITION: u16 = 32;
+const IDM_AUTOSTART: u16 = 33;
+const IDM_LANG_SYSTEM: u16 = 40;
+const IDM_LANG_EN: u16 = 41;
+const IDM_LANG_ZH: u16 = 42;
+const IDM_LANG_ES: u16 = 43;
+const IDM_LANG_HI: u16 = 44;
+const IDM_LANG_FR: u16 = 45;
+const IDM_LANG_RU: u16 = 46;
 const IDM_MODEL_CHATGPT: u16 = 60;
 const IDM_MODEL_ZAI: u16 = 61;
 const IDM_MODEL_DEEPSEEK: u16 = 62;
@@ -187,6 +197,7 @@ pub fn run() {
         let _ = RegisterClassExW(&tooltip);
 
         let (config, mut config_path) = config::load();
+        i18n::set(i18n::for_config(&config.language));
         config_path = config::save(&config, &config_path);
         let is_dark = theme::is_dark_mode();
 
@@ -998,7 +1009,7 @@ fn paint_widget(
 }
 
 fn create_font(height: i32, weight: i32) -> HFONT {
-    let name = native_interop::wide_str("Segoe UI Variable Text");
+    let name = native_interop::wide_str(i18n::font_name());
     unsafe {
         CreateFontW(
             sc(height),
@@ -1089,7 +1100,7 @@ fn tip_lines(readings: &[Reading], is_dark: bool) -> Vec<TipRow> {
         if reading.state == State::Stale {
             rows.push(TipRow::Detail {
                 label: String::new(),
-                value: "данные устарели".to_string(),
+                value: i18n::s().stale.to_string(),
                 reset: None,
                 color: muted,
             });
@@ -1831,6 +1842,7 @@ fn toggle_widget(hwnd: HWND) {
 
 fn reload_config() {
     let (new_config, path) = config::load();
+    i18n::set(i18n::for_config(&new_config.language));
     let mut state = lock_state();
     let Some(state) = state.as_mut() else {
         return;
@@ -1857,23 +1869,25 @@ fn show_context_menu(hwnd: HWND) {
             None => (120, Config::default()),
         }
     };
+    let ui = i18n::s();
+    let autostart_enabled = autostart::is_enabled();
 
     unsafe {
         let menu = CreatePopupMenu().unwrap();
-        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_REFRESH, "Обновить");
+        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_REFRESH, ui.refresh);
 
         let freq_menu = CreatePopupMenu().unwrap();
         for (id, secs, label) in [
-            (IDM_FREQ_1MIN, 60u64, "1 минута"),
-            (IDM_FREQ_2MIN, 120, "2 минуты"),
-            (IDM_FREQ_5MIN, 300, "5 минут"),
-            (IDM_FREQ_15MIN, 900, "15 минут"),
-            (IDM_FREQ_1HOUR, 3600, "1 час"),
+            (IDM_FREQ_1MIN, 60u64, ui.min1),
+            (IDM_FREQ_2MIN, 120, ui.min2),
+            (IDM_FREQ_5MIN, 300, ui.min5),
+            (IDM_FREQ_15MIN, 900, ui.min15),
+            (IDM_FREQ_1HOUR, 3600, ui.hour1),
         ] {
             let flags = if interval == secs { MF_CHECKED } else { MENU_ITEM_FLAGS(0) };
             append_menu(freq_menu, flags, id, label);
         }
-        append_submenu(menu, freq_menu, "Частота обновления");
+        append_submenu(menu, freq_menu, ui.interval);
 
         let models_menu = CreatePopupMenu().unwrap();
         for (id, provider, label) in [
@@ -1891,14 +1905,59 @@ fn show_context_menu(hwnd: HWND) {
             };
             append_menu(models_menu, flags, id, label);
         }
-        append_submenu(menu, models_menu, "Модели");
+        append_submenu(menu, models_menu, ui.models);
 
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_UPDATE_CHECK, "Обновить приложение");
-        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_VERSION, &format!("Версия {}", env!("CARGO_PKG_VERSION")));
-        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_RESET_POSITION, "Сбросить позицию");
+        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_UPDATE_CHECK, ui.update_app);
+        append_menu(
+            menu,
+            MENU_ITEM_FLAGS(0),
+            IDM_VERSION,
+            &format!("{} {}", ui.version, env!("CARGO_PKG_VERSION")),
+        );
+
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_EXIT, "Выход");
+        let auto_flags = if autostart_enabled {
+            MF_CHECKED
+        } else {
+            MENU_ITEM_FLAGS(0)
+        };
+        append_menu(menu, auto_flags, IDM_AUTOSTART, ui.autostart);
+
+        let language_menu = CreatePopupMenu().unwrap();
+        let system_flags = if config.language.trim().is_empty()
+            || config.language.eq_ignore_ascii_case("system")
+        {
+            MF_CHECKED
+        } else {
+            MENU_ITEM_FLAGS(0)
+        };
+        append_menu(
+            language_menu,
+            system_flags,
+            IDM_LANG_SYSTEM,
+            ui.system_default,
+        );
+        for (id, lang) in [
+            (IDM_LANG_EN, Lang::En),
+            (IDM_LANG_ZH, Lang::Zh),
+            (IDM_LANG_ES, Lang::Es),
+            (IDM_LANG_HI, Lang::Hi),
+            (IDM_LANG_FR, Lang::Fr),
+            (IDM_LANG_RU, Lang::Ru),
+        ] {
+            let flags = if Lang::from_code(&config.language) == Some(lang) {
+                MF_CHECKED
+            } else {
+                MENU_ITEM_FLAGS(0)
+            };
+            append_menu(language_menu, flags, id, lang.native_label());
+        }
+        append_submenu(menu, language_menu, ui.language);
+
+        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_RESET_POSITION, ui.reset_position);
+        let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
+        append_menu(menu, MENU_ITEM_FLAGS(0), IDM_EXIT, ui.exit);
 
         let mut point = POINT::default();
         let _ = GetCursorPos(&mut point);
@@ -1954,8 +2013,45 @@ fn handle_menu_command(hwnd: HWND, id: u16) {
         IDM_MODEL_ANTIGRAVITY => toggle_provider(hwnd, ProviderId::Antigravity),
         IDM_MODEL_COPILOT => toggle_provider(hwnd, ProviderId::Copilot),
         IDM_UPDATE_CHECK | IDM_VERSION => check_updates(hwnd),
+        IDM_AUTOSTART => toggle_autostart(hwnd),
+        IDM_LANG_SYSTEM => set_language(hwnd, "system"),
+        IDM_LANG_EN => set_language(hwnd, "en"),
+        IDM_LANG_ZH => set_language(hwnd, "zh"),
+        IDM_LANG_ES => set_language(hwnd, "es"),
+        IDM_LANG_HI => set_language(hwnd, "hi"),
+        IDM_LANG_FR => set_language(hwnd, "fr"),
+        IDM_LANG_RU => set_language(hwnd, "ru"),
         IDM_RESET_POSITION => reset_position(hwnd),
         _ => {}
+    }
+}
+
+fn toggle_autostart(hwnd: HWND) {
+    let enabled = autostart::is_enabled();
+    if let Err(_) = autostart::set_enabled(!enabled) {
+        show_message(
+            hwnd,
+            i18n::s().autostart,
+            i18n::s().autostart_failed,
+            MB_OK | MB_ICONWARNING,
+        );
+    }
+}
+
+fn set_language(hwnd: HWND, code: &str) {
+    {
+        let mut state = lock_state();
+        let Some(state) = state.as_mut() else {
+            return;
+        };
+        state.config.language = code.to_string();
+    }
+    i18n::set(i18n::for_config(code));
+    save_config();
+    render_widget();
+    sync_tray(hwnd);
+    if is_tooltip_visible() {
+        render_tooltip();
     }
 }
 
@@ -2023,6 +2119,7 @@ fn reset_position(hwnd: HWND) {
 }
 
 fn check_updates(hwnd: HWND) {
+    let ui = i18n::s();
     match updater::check() {
         Ok(Some(release)) => {
             let version = release
@@ -2030,23 +2127,26 @@ fn check_updates(hwnd: HWND) {
                 .clone()
                 .unwrap_or_else(|| release.tag_name.clone());
             let text = format!(
-                "Доступна новая версия: {version}\nТекущая: {}.\n\nСкачать и установить? Приложение закроется и перезапустится.",
-                env!("CARGO_PKG_VERSION")
+                "{}: {version}\n{} {}.\n\n{}",
+                ui.update_available,
+                ui.version,
+                env!("CARGO_PKG_VERSION"),
+                ui.update_confirm
             );
-            let result = show_message(hwnd, "Обновление", &text, MB_YESNO | MB_ICONINFORMATION);
+            let result = show_message(hwnd, ui.update_title, &text, MB_YESNO | MB_ICONINFORMATION);
             if result == IDYES {
                 match updater::install(&release) {
                     Ok(()) => {
                         show_message(
                             hwnd,
-                            "Обновление",
-                            "Обновление загружено. Приложение сейчас закроется и установит новую версию.",
+                            ui.update_title,
+                            ui.update_downloaded,
                             MB_OK | MB_ICONINFORMATION,
                         );
                         let _ = unsafe { DestroyWindow(hwnd) };
                     }
                     Err(error) => {
-                        show_message(hwnd, "Обновление", &error, MB_OK | MB_ICONWARNING);
+                        show_message(hwnd, ui.update_title, &error, MB_OK | MB_ICONWARNING);
                         updater::open_release(&release);
                     }
                 }
@@ -2055,13 +2155,18 @@ fn check_updates(hwnd: HWND) {
         Ok(None) => {
             show_message(
                 hwnd,
-                "Обновление",
-                "У вас последняя версия.",
+                ui.update_title,
+                ui.last_version,
                 MB_OK | MB_ICONINFORMATION,
             );
         }
         Err(error) => {
-            show_message(hwnd, "Обновление", &error, MB_OK | MB_ICONWARNING);
+            show_message(
+                hwnd,
+                ui.update_title,
+                &format!("{}: {error}", ui.update_failed),
+                MB_OK | MB_ICONWARNING,
+            );
         }
     }
 }

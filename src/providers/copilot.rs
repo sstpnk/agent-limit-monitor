@@ -77,7 +77,7 @@ pub fn poll(_config: &Config) -> Reading {
         let label = quota_label(key);
         detail.push(DetailLine {
             label: label.clone(),
-            value: format!("осталось {}", format_percent(remaining)),
+            value: format!("{} {}", crate::i18n::s().remaining, format_percent(remaining)),
             reset: format_reset_detail(reset),
         });
         let prefer = key == PREMIUM_QUOTA
@@ -105,7 +105,7 @@ pub fn poll(_config: &Config) -> Reading {
             let label = quota_label(key);
             detail.push(DetailLine {
                 label: label.clone(),
-                value: format!("осталось {}", format_percent(remaining)),
+                value: format!("{} {}", crate::i18n::s().remaining, format_percent(remaining)),
                 reset: format_reset_detail(reset),
             });
             if selected.is_none() {
@@ -139,9 +139,9 @@ pub fn poll(_config: &Config) -> Reading {
 
 fn quota_label(key: &str) -> String {
     match key {
-        "premium_interactions" => "Premium requests".to_string(),
-        "chat" => "Chat".to_string(),
-        "completions" => "Completions".to_string(),
+        "premium_interactions" => crate::i18n::s().premium_requests.to_string(),
+        "chat" => crate::i18n::s().chat.to_string(),
+        "completions" => crate::i18n::s().completions.to_string(),
         other => {
             let mut label = other.replace('_', " ");
             if let Some(first) = label.get_mut(0..1) {

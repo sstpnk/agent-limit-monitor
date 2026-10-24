@@ -203,7 +203,7 @@ pub fn poll(config: &Config) -> Reading {
     }
     if detail.is_empty() {
         detail.push(DetailLine {
-            label: "Кредиты".to_string(),
+            label: crate::i18n::s().credits.to_string(),
             value: format_credits(total),
             reset: None,
         });
@@ -212,7 +212,7 @@ pub fn poll(config: &Config) -> Reading {
     let expiry_text = expiry.and_then(|time| format_reset_detail(Some(time)));
     if components > 1 {
         detail.push(DetailLine {
-            label: "Итого".to_string(),
+            label: crate::i18n::s().total.to_string(),
             value: format_credits(total),
             reset: expiry_text,
         });

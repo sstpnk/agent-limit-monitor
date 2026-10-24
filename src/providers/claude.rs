@@ -83,10 +83,18 @@ pub fn poll(config: &Config) -> Reading {
 
     let mut windows = Vec::new();
     if let Some(bucket) = response.five_hour {
-        push_window(&mut windows, "5ч", bucket);
+        push_window(
+            &mut windows,
+            &format!("5{}", crate::i18n::s().unit_hour),
+            bucket,
+        );
     }
     if let Some(bucket) = response.seven_day {
-        push_window(&mut windows, "7д", bucket);
+        push_window(
+            &mut windows,
+            &format!("7{}", crate::i18n::s().unit_day),
+            bucket,
+        );
     }
     if windows.is_empty() {
         return error("Claude Code не вернул лимиты", State::Error);
@@ -125,9 +133,9 @@ pub fn poll(config: &Config) -> Reading {
         detail.push(DetailLine {
             label: window.label.clone(),
             value: if window.limit_reached {
-                "0% · лимит".to_string()
+                format!("0% · {}", crate::i18n::s().limit)
             } else {
-                format!("осталось {}", format_percent(window.remaining))
+                format!("{} {}", crate::i18n::s().remaining, format_percent(window.remaining))
             },
             reset: format_reset_detail(window.reset_at),
         });

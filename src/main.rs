@@ -1,10 +1,12 @@
 #![windows_subsystem = "windows"]
 
+mod autostart;
 mod config;
 mod credentials;
 mod diagnose;
 mod format;
 mod http;
+mod i18n;
 mod models;
 mod native_interop;
 mod providers;

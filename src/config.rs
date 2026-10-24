@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[serde(default)]
 pub struct Config {
     pub version: u32,
+    pub language: String,
     pub providers: ProvidersConfig,
     pub poll_interval_secs: u64,
     pub display: DisplayConfig,
@@ -16,6 +17,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             version: 1,
+            language: "system".to_string(),
             providers: ProvidersConfig::default(),
             poll_interval_secs: 120,
             display: DisplayConfig::default(),

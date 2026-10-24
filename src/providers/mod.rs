@@ -28,7 +28,7 @@ pub fn poll_all(config: &Config) -> Vec<Reading> {
         readings.push(Reading::error(
             ProviderId::ChatGpt,
             crate::models::State::Missing,
-            "Нет включённых моделей",
+            crate::i18n::s().no_models,
         ));
     }
     readings

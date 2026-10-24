@@ -117,6 +117,11 @@ pub fn poll(config: &Config) -> Reading {
         .as_deref()
         .unwrap_or("unknown")
         .to_string();
+    let plan_label = if plan.eq_ignore_ascii_case("free") {
+        crate::i18n::s().free
+    } else {
+        plan.as_str()
+    };
     let rate = match response.rate_limit {
         Some(rate) => rate,
         None => return error("ChatGPT не вернул лимиты", State::Error),
@@ -148,9 +153,9 @@ pub fn poll(config: &Config) -> Reading {
     for window in &windows {
         let reset = format_reset_detail(window.reset_at);
         let value = if window.limit_reached {
-            "0% · лимит".to_string()
+            format!("0% · {}", crate::i18n::s().limit)
         } else {
-            format!("осталось {}", format_percent(window.remaining))
+            format!("{} {}", crate::i18n::s().remaining, format_percent(window.remaining))
         };
         detail.push(DetailLine {
             label: window.label.clone(),
@@ -172,7 +177,7 @@ pub fn poll(config: &Config) -> Reading {
         value: Value::Percent(selected.remaining),
         reset_at: selected.reset_at,
         state,
-        title: format!("ChatGPT (Codex) · {plan}"),
+        title: format!("ChatGPT (Codex) · {plan_label}"),
         windows,
         detail,
     }
@@ -206,18 +211,18 @@ fn select_window<'a>(windows: &'a [WindowInfo], mode: &str) -> Option<&'a Window
 
 fn window_label(seconds: Option<i64>) -> String {
     let Some(seconds) = seconds.filter(|seconds| *seconds > 0) else {
-        return "лимит".to_string();
+        return crate::i18n::s().limit.to_string();
     };
     if seconds <= 6 * 3600 {
-        "5ч".to_string()
+        format!("5{}", crate::i18n::s().unit_hour)
     } else if seconds <= 2 * 86400 {
-        "1д".to_string()
+        format!("1{}", crate::i18n::s().unit_day)
     } else if seconds <= 8 * 86400 {
-        "7д".to_string()
+        format!("7{}", crate::i18n::s().unit_day)
     } else if seconds <= 31 * 86400 {
-        "30д".to_string()
+        format!("30{}", crate::i18n::s().unit_day)
     } else {
-        format!("{}д", seconds / 86400)
+        format!("{}{}", seconds / 86400, crate::i18n::s().unit_day)
     }
 }
 

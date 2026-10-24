@@ -2,6 +2,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use windows::Win32::System::Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION};
 
+use crate::i18n;
 use crate::models::{Reading, Value};
 
 pub fn now_unix() -> i64 {
@@ -24,7 +25,7 @@ pub fn format_countdown(reset_at: Option<SystemTime>) -> Option<String> {
     let now = SystemTime::now();
     let remaining = match reset.duration_since(now) {
         Ok(duration) => duration.as_secs(),
-        Err(_) => return Some("сейчас".to_string()),
+        Err(_) => return Some(i18n::s().now.to_string()),
     };
     Some(format_secs(remaining))
 }
@@ -32,17 +33,17 @@ pub fn format_countdown(reset_at: Option<SystemTime>) -> Option<String> {
 fn format_secs(total_secs: u64) -> String {
     let days = total_secs / 86400;
     if days > 0 {
-        return format!("{days}д");
+        return format!("{days}{}", i18n::s().unit_day);
     }
     let hours = total_secs / 3600;
     if hours > 0 {
-        return format!("{hours}ч");
+        return format!("{hours}{}", i18n::s().unit_hour);
     }
     let minutes = total_secs / 60;
     if minutes > 0 {
-        return format!("{minutes}м");
+        return format!("{minutes}{}", i18n::s().unit_minute);
     }
-    format!("{total_secs}с")
+    format!("{total_secs}{}", i18n::s().unit_second)
 }
 
 pub fn format_percent(percent: f64) -> String {
@@ -109,7 +110,7 @@ pub fn format_reset_detail(reset_at: Option<SystemTime>) -> Option<String> {
     let reset = reset_at?;
     let remaining = reset.duration_since(SystemTime::now()).ok();
     if remaining.is_none() {
-        return Some("сейчас".to_string());
+        return Some(i18n::s().now.to_string());
     }
     let remaining = remaining?;
     let countdown = format_secs(remaining.as_secs());
