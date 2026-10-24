@@ -35,6 +35,10 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 - шрифт Segoe UI Variable Text 11 px
 - один фоновый поток опроса, без egui/WebView/тем
 
+## Скачать
+
+Готовый exe: [Releases v0.1.0](https://github.com/sstpnk/agent-limit-monitor/releases/tag/v0.1.0).
+
 ## Запуск
 
 ```powershell
@@ -144,7 +148,7 @@ target\release\agent-limit-monitor.exe
 - Z.AI использует внутренний API и зашифрованный файл AutoClaw; при изменении формата провайдер мягко отключится (`Z.AI —`).
 - ChatGPT зависит от Cloudflare; fallback требует Node.js.
 - Claude/Antigravity/Copilot показываются только при наличии соответствующего входа; без него строка показывает `—`.
-- Автообновление требует GitHub Release с asset `agent-limit-monitor.exe`; пока релизов нет, пункт сообщит об ошибке.
+- Автообновление работает через GitHub Release с asset `agent-limit-monitor.exe`; v0.1.0 уже опубликован, следующие версии подхватятся автоматически.
 - После перезапуска `explorer.exe` приложение нужно запустить заново; позиция сохраняется в конфиге.
 
 ## Лицензия

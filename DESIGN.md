@@ -200,7 +200,7 @@ src/
     deepseek.rs      api.deepseek.com/user/balance
   window.rs          layered/taskbar окно, три строки, hover-плашка, drag, меню
   tray.rs            статическая иконка + контекстное меню
-  updater.rs         проверка GitHub Releases + открытие страницы
+  updater.rs         проверка GitHub Releases, скачивание asset, замена exe
   native_interop.rs  wide_str, taskbar, layered/move, DPI
   theme.rs           is_dark_mode (реестр)
   diagnose.rs        --diagnose лог
@@ -505,7 +505,7 @@ set PATH=%USERPROFILE%\.cargo\bin;%PATH%
 cargo build --release
 ```
 
-Для CI — существующий `.github/workflows/release.yml` или установка VS Build Tools на машине сборки. Оценки размера ниже всё ещё нужно подтвердить на финальной сборке.
+CI-workflow не включён в репозиторий (у токена нет scope `workflow`); релиз v0.1.0 собран локально через `build.bat`.
 
 ### 7.2. Тесты
 
