@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
+
 use serde::Deserialize;
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::HWND;
@@ -83,13 +86,57 @@ pub fn check() -> Result<Option<Release>, String> {
         ("User-Agent", "agent-limit-monitor"),
         ("Accept", "application/vnd.github+json"),
     ];
-    let release: Release = http::get_json(RELEASES_URL, &headers)
-        .map_err(|_| "Не удалось проверить обновления (нет релизов или сети)".to_string())?;
+    let release: Release = match http::get_json(RELEASES_URL, &headers) {
+        Ok(release) => release,
+        Err(error) => {
+            crate::diagnose::log(format!("GitHub API failed ({error:?}); trying Node"));
+            node_latest_release()?
+        }
+    };
     if is_newer(env!("CARGO_PKG_VERSION"), &release.tag_name) {
         Ok(Some(release))
     } else {
         Ok(None)
     }
+}
+
+fn node_latest_release() -> Result<Release, String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const SCRIPT: &str = r#"
+const https=require('https');
+const req=https.get('https://api.github.com/repos/sstpnk/agent-limit-monitor/releases/latest',{headers:{'User-Agent':'agent-limit-monitor','Accept':'application/vnd.github+json'}},res=>{
+ let body=''; res.on('data',c=>body+=c); res.on('end',()=>process.stdout.write(body));
+});
+req.on('error',()=>process.exit(2));
+req.setTimeout(10000,()=>{req.destroy();process.exit(3);});
+"#;
+    let output = Command::new(node_path())
+        .arg("-e")
+        .arg(SCRIPT)
+        .creation_flags(CREATE_NO_WINDOW)
+        .stdin(Stdio::null())
+        .stderr(Stdio::null())
+        .output()
+        .map_err(|_| "Не удалось проверить обновления".to_string())?;
+    if !output.status.success() {
+        return Err("Не удалось проверить обновления (нет релизов или сети)".to_string());
+    }
+    serde_json::from_slice(&output.stdout)
+        .map_err(|_| "Не удалось разобрать ответ GitHub".to_string())
+}
+
+fn node_path() -> PathBuf {
+    for candidate in [
+        r"C:\Program Files\nodejs\node.exe",
+        r"C:\Program Files (x86)\nodejs\node.exe",
+    ] {
+        let path = PathBuf::from(candidate);
+        if path.is_file() {
+            return path;
+        }
+    }
+    PathBuf::from("node")
 }
 
 pub fn open_release(release: &Release) {

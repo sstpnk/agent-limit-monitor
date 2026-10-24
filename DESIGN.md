@@ -2,7 +2,7 @@
 
 Дата: 2026-10-24  
 База: форк `sstpnk/Claude-Code-Usage-Monitor`, ветка `main` = v1.4.9  
-Статус: **MVP реализован** (v0.1.0). Exe — **943 616 байт**, 1–2 колонки, высота 42 px, hover-плашка, ChatGPT + Z.AI + DeepSeek + Claude + Antigravity + Copilot, taskbar-виджет с меню и tray-иконкой. Поведение taskbar/меню/tray — из v2.
+Статус: **MVP реализован** (v0.1.0). Exe — **948 736 байт**, 1–2 колонки, высота 42 px, hover-плашка, ChatGPT + Z.AI + DeepSeek + Claude + Antigravity + Copilot, taskbar-виджет с меню и tray-иконкой. Поведение taskbar/меню/tray — из v2.
 
 ---
 
@@ -46,7 +46,7 @@
 - Z.AI: DPAPI + AES-256-GCM, wallet/ledger; opt-in refresh токена с DPAPI-кэшем.
 - DeepSeek: `user/balance`, сумма `topped_up + granted`.
 - Если `SetParent(taskbar)` запрещён (Windows 11/политика), включается taskbar-overlay: окно остаётся слева от области уведомлений, перетаскивается и сохраняет offset.
-- Сборка: `build.bat build --release`; exe **943 616 Б**, private ~3,4 МБ, WS ~21 МБ.
+- Сборка: `build.bat build --release`; exe **948 736 Б**, private ~3,4 МБ, WS ~21 МБ.
 
 Проверено: DeepSeek platform-баланс через DSH, ChatGPT free, Z.AI, переключение моделей/частоты, taskbar-embed, tray-иконка. Не проверено: Claude/Antigravity/Copilot без реальных входов, Z.AI refresh при истёкшем токене, ChatGPT-подписка, `explorer.exe` restart.
 
@@ -171,7 +171,7 @@ DeepSeek · USD
 - Правый клик по виджету или tray: **Обновить**, **Частота обновления** (1/2/5/15/60 мин), **Модели** (ChatGPT/Z.AI/DeepSeek/Claude/Antigravity/Copilot), **Обновить приложение**, **Версия**, **Сбросить позицию**, **Выход**.
 - Левый клик по tray: показать/скрыть виджет.
 - Одна статическая tray-иконка; tooltip — сводка. Подменю «Модели» включает/выключает провайдеров, настройки сохраняются в JSON.
-- «Обновить приложение» скачивает asset `agent-limit-monitor.exe` из GitHub Release, запускает cmd-скрипт замены и перезапуска; при ошибке открывает страницу релиза.
+- «Обновить приложение» проверяет GitHub Releases (native API, при ошибке — Node fallback), скачивает asset `agent-limit-monitor.exe`, запускает cmd-скрипт замены и перезапуска; при ошибке открывает страницу релиза.
 
 ### 3.6. Конфигурация вместо панели
 
@@ -447,7 +447,7 @@ Accept: application/json
 
 | Метрика | Сейчас v2.20 | Цель | Факт v0.1.0 |
 |---|---:|---:|---:|
-| exe | 7,63 МБ | ≤ 1,0 МБ | **943 616 Б** |
+| exe | 7,63 МБ | ≤ 1,0 МБ | **948 736 Б** |
 | Файлы в `%APPDATA%` | 576 КБ+ | ≤ 10 КБ | конфиг < 1 КБ |
 | Private bytes | не замерено | ≤ 8 МБ | **~2,8 МБ** |
 | Working set | не замерено | ≤ 20 МБ | **~17 МБ** |
@@ -456,7 +456,7 @@ Accept: application/json
 | GDI objects | — | ≤ 50 | не замерено |
 | Старт до виджета | — | ≤ 150 мс | не замерено |
 
-v1.4.9 даёт 15,8 МБ WS / 2,4 МБ private; фактическая сборка — 943 КБ exe и ~21 МБ WS. Главный выигрыш — отсутствие egui/D3D11/тем.
+v1.4.9 даёт 15,8 МБ WS / 2,4 МБ private; фактическая сборка — 949 КБ exe и ~21 МБ WS. Главный выигрыш — отсутствие egui/D3D11/тем.
 
 ### 6.2. Что экономит память
 

@@ -185,6 +185,7 @@ pub fn poll(config: &Config) -> Reading {
     };
 
     let mut detail = Vec::new();
+    let mut components = 0;
     for wallet in data.wallets.iter().filter(|wallet| wallet.balance > 0) {
         let label = wallet
             .display_name
@@ -198,6 +199,7 @@ pub fn poll(config: &Config) -> Reading {
             value: format_credits(wallet.balance.max(0) as u64),
             reset: None,
         });
+        components += 1;
     }
     if detail.is_empty() {
         detail.push(DetailLine {
@@ -205,12 +207,18 @@ pub fn poll(config: &Config) -> Reading {
             value: format_credits(total),
             reset: None,
         });
+        components = 1;
     }
-    detail.push(DetailLine {
-        label: "Итого".to_string(),
-        value: format_credits(total),
-        reset: expiry.and_then(|time| format_reset_detail(Some(time))),
-    });
+    let expiry_text = expiry.and_then(|time| format_reset_detail(Some(time)));
+    if components > 1 {
+        detail.push(DetailLine {
+            label: "Итого".to_string(),
+            value: format_credits(total),
+            reset: expiry_text,
+        });
+    } else if let Some(line) = detail.last_mut() {
+        line.reset = expiry_text;
+    }
 
     let state = if total == 0 {
         State::Critical

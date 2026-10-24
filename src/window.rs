@@ -1474,7 +1474,7 @@ fn show_tooltip() {
                 .map(|state| state.hwnd.to_hwnd())
                 .unwrap_or_default(),
             TIMER_TOPMOST,
-            120,
+            200,
             None,
         );
     }
@@ -1580,7 +1580,6 @@ unsafe extern "system" fn wnd_proc(
                     }
                 }
                 TIMER_TOPMOST => {
-                    let _ = KillTimer(hwnd, TIMER_TOPMOST);
                     let tip = lock_state()
                         .as_ref()
                         .map(|state| state.tip_hwnd.to_hwnd())
