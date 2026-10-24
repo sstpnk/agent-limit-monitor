@@ -1622,6 +1622,9 @@ unsafe extern "system" fn wnd_proc(
         }
         WM_APP_USAGE_UPDATED => {
             render_widget();
+            if is_tooltip_visible() {
+                render_tooltip();
+            }
             sync_tray(hwnd);
             LRESULT(0)
         }
@@ -2051,6 +2054,7 @@ fn set_language(hwnd: HWND, code: &str) {
     if is_tooltip_visible() {
         render_tooltip();
     }
+    spawn_poll(hwnd);
 }
 
 fn set_poll_interval(hwnd: HWND, secs: u64) {
