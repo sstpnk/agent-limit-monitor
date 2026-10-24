@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "providers": {
+    "chatgpt": {
+      "enabled": true,
+      "auth_path": "",
+      "window": "most_constrained"
+    },
+    "zai": {
+      "enabled": true,
+      "account": "auto",
+      "show_expiry": true,
+      "refresh_token": false
+    },
+    "deepseek": {
+      "enabled": true,
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "currency": "USD",
+      "use_platform_token": true
+    },
+    "claude": {
+      "enabled": false,
+      "auth_path": ""
+    },
+    "antigravity": {
+      "enabled": false
+    },
+    "copilot": {
+      "enabled": false
+    }
+  },
+  "poll_interval_secs": 120,
+  "display": {
+    "metric": "remaining",
+    "labels": "full",
+    "dock": "taskbar",
+    "compact": false
+  },
+  "position": {
+    "taskbar_index": 0,
+    "offset": 0
+  }
+}

@@ -1,0 +1,30 @@
+# Rust build artifacts
+/target/
+/agent-limit-monitor.exe
+/config.json
+
+# Cargo lock (optional for binaries, included by default)
+# Cargo.lock
+
+# Debug/log files
+*.log
+
+# IDE
+.idea/
+.vscode/
+.history/
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Local release workflow helper
+workflow.cmd
+AGENTS.md
+
+# Local WinGet manifest generation output
+/manifests/
