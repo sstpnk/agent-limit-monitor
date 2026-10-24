@@ -29,7 +29,7 @@ ChatGPT free/Plus/Pro определяется автоматически по �
 
 ## Размер
 
-- exe: **962 КБ**
+- exe: **965 КБ**
 - private bytes: ~3,5 МБ, working set: ~21 МБ (замер на Windows 11, 100% DPI)
 - высота виджета 42 px, ширина считается по фактическим значениям; при >3 включённых моделях — две колонки
 - шрифт Segoe UI Variable Text 11 px; для 中文 — Microsoft YaHei UI, для हिन्दी — Nirmala UI

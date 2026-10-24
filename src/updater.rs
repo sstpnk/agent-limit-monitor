@@ -3,7 +3,8 @@ use std::process::{Command, Stdio};
 
 use serde::Deserialize;
 use windows::core::PCWSTR;
-use windows::Win32::Foundation::HWND;
+use windows::Win32::Foundation::{CloseHandle, HWND};
+use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_LIMITED_INFORMATION};
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
@@ -11,7 +12,7 @@ use crate::http;
 use crate::native_interop::wide_str;
 
 const RELEASES_URL: &str =
-    "https://api.github.com/repos/sstpnk/Claude-Code-Usage-Monitor/releases/latest";
+    "https://api.github.com/repos/sstpnk/agent-limit-monitor/releases/latest";
 
 #[derive(Deserialize)]
 pub struct Release {
@@ -48,37 +49,76 @@ pub fn install(release: &Release) -> Result<(), String> {
     }
 
     let current = std::env::current_exe().map_err(|_| "Не удалось найти текущий exe".to_string())?;
-    let temp = std::env::temp_dir().join(format!(
-        "agent-limit-monitor-{}-update.exe",
-        std::process::id()
-    ));
+    let temp = current.with_extension("new.exe");
+    let marker = current.with_extension("new.update");
+    let pid = std::process::id();
+    std::fs::write(
+        &marker,
+        format!("{}\n{pid}\n", current.display()),
+    )
+    .map_err(|_| "Не удалось сохранить параметры обновления".to_string())?;
     std::fs::write(&temp, bytes).map_err(|_| "Не удалось сохранить обновление".to_string())?;
 
-    let script = std::env::temp_dir().join(format!(
-        "agent-limit-monitor-{}-update.cmd",
-        std::process::id()
-    ));
-    let script_text = format!(
-        "@echo off\r\n\
-         ping 127.0.0.1 -n 3 >nul\r\n\
-         copy /y \"{}\" \"{}\" >nul\r\n\
-         start \"\" \"{}\"\r\n\
-         del \"%~f0\"\r\n",
-        temp.display(),
-        current.display(),
-        current.display()
-    );
-    std::fs::write(&script, script_text)
-        .map_err(|_| "Не удалось создать скрипт обновления".to_string())?;
-
-    use std::os::windows::process::CommandExt;
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    std::process::Command::new("cmd")
-        .args(["/C", &script.to_string_lossy()])
-        .creation_flags(CREATE_NO_WINDOW)
-        .spawn()
-        .map_err(|_| "Не удалось запустить обновление".to_string())?;
+    let operation = wide_str("open");
+    let file = wide_str(&temp.to_string_lossy());
+    let result = unsafe {
+        ShellExecuteW(
+            HWND::default(),
+            PCWSTR::from_raw(operation.as_ptr()),
+            PCWSTR::from_raw(file.as_ptr()),
+            PCWSTR::null(),
+            PCWSTR::null(),
+            SW_SHOWNORMAL,
+        )
+    };
+    if result.0 as isize <= 32 {
+        return Err("Не удалось запустить обновление".to_string());
+    }
     Ok(())
+}
+
+/// Runs in the freshly downloaded exe: wait for the old process, replace the
+/// installed file and start it again. This avoids keeping a cmd/PowerShell
+/// helper alive after the parent exits.
+pub fn apply_update(target: &str, pid: u32) {
+    let target = PathBuf::from(target);
+    for _ in 0..120 {
+        if !process_alive(pid) {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+    std::thread::sleep(std::time::Duration::from_millis(400));
+
+    let Ok(self_exe) = std::env::current_exe() else {
+        return;
+    };
+    let mut copied = false;
+    for _ in 0..20 {
+        if std::fs::copy(&self_exe, &target).is_ok() {
+            copied = true;
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(300));
+    }
+    if copied {
+        let _ = std::fs::remove_file(target.with_extension("new.update"));
+        let _ = Command::new(&target).spawn();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        let _ = std::fs::remove_file(self_exe);
+    }
+}
+
+fn process_alive(pid: u32) -> bool {
+    unsafe {
+        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid);
+        if let Ok(handle) = handle {
+            let _ = CloseHandle(handle);
+            true
+        } else {
+            false
+        }
+    }
 }
 
 pub fn check() -> Result<Option<Release>, String> {
