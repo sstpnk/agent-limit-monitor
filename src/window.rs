@@ -1878,6 +1878,8 @@ fn show_context_menu(hwnd: HWND) {
         let menu = CreatePopupMenu().unwrap();
         append_menu(menu, MENU_ITEM_FLAGS(0), IDM_REFRESH, ui.refresh);
 
+        let settings_menu = CreatePopupMenu().unwrap();
+
         let freq_menu = CreatePopupMenu().unwrap();
         for (id, secs, label) in [
             (IDM_FREQ_1MIN, 60u64, ui.min1),
@@ -1889,7 +1891,7 @@ fn show_context_menu(hwnd: HWND) {
             let flags = if interval == secs { MF_CHECKED } else { MENU_ITEM_FLAGS(0) };
             append_menu(freq_menu, flags, id, label);
         }
-        append_submenu(menu, freq_menu, ui.interval);
+        append_submenu(settings_menu, freq_menu, ui.interval);
 
         let models_menu = CreatePopupMenu().unwrap();
         for (id, provider, label) in [
@@ -1907,23 +1909,14 @@ fn show_context_menu(hwnd: HWND) {
             };
             append_menu(models_menu, flags, id, label);
         }
-        append_submenu(menu, models_menu, ui.models);
+        append_submenu(settings_menu, models_menu, ui.models);
 
-        let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
-        append_menu(
-            menu,
-            MENU_ITEM_FLAGS(0),
-            IDM_UPDATE_CHECK,
-            &format!("{} (v {})", ui.update_app, env!("CARGO_PKG_VERSION")),
-        );
-
-        let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
         let auto_flags = if autostart_enabled {
             MF_CHECKED
         } else {
             MENU_ITEM_FLAGS(0)
         };
-        append_menu(menu, auto_flags, IDM_AUTOSTART, ui.autostart);
+        append_menu(settings_menu, auto_flags, IDM_AUTOSTART, ui.autostart);
 
         let language_menu = CreatePopupMenu().unwrap();
         let system_flags = if config.language.trim().is_empty()
@@ -1954,10 +1947,18 @@ fn show_context_menu(hwnd: HWND) {
             };
             append_menu(language_menu, flags, id, lang.native_label());
         }
-        append_submenu(menu, language_menu, ui.language);
+        append_submenu(settings_menu, language_menu, ui.language);
 
+        append_submenu(menu, settings_menu, ui.settings);
         append_menu(menu, MENU_ITEM_FLAGS(0), IDM_RESET_POSITION, ui.reset_position);
+
         let _ = AppendMenuW(menu, MF_SEPARATOR, 0, PCWSTR::null());
+        append_menu(
+            menu,
+            MENU_ITEM_FLAGS(0),
+            IDM_UPDATE_CHECK,
+            &format!("{} (v {})", ui.update_app, env!("CARGO_PKG_VERSION")),
+        );
         append_menu(menu, MENU_ITEM_FLAGS(0), IDM_EXIT, ui.exit);
 
         let mut point = POINT::default();

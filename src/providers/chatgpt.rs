@@ -148,16 +148,17 @@ pub fn poll(config: &Config) -> Reading {
         .unwrap_or_else(|| windows[0].clone());
 
     let mut detail = Vec::new();
+    let ui = crate::i18n::s();
     for window in &windows {
         let reset = format_reset_detail(window.reset_at);
-        let value = if window.limit_reached {
-            format!("0% · {}", crate::i18n::s().limit)
+        let label = if window.label == ui.limit {
+            ui.limit.to_string()
         } else {
-            format!("{} {}", crate::i18n::s().remaining, format_percent(window.remaining))
+            format!("{} {}", ui.limit_label, window.label)
         };
         detail.push(DetailLine {
-            label: window.label.clone(),
-            value,
+            label,
+            value: format_percent(window.remaining),
             reset,
         });
     }

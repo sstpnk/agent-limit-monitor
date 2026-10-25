@@ -242,17 +242,27 @@ fn balance_detail(
 ) -> Vec<DetailLine> {
     let normal = normal.filter(|value| *value > 0);
     let bonus = bonus.filter(|value| *value > 0);
+    let single = normal.is_some() ^ bonus.is_some();
+    let ui = crate::i18n::s();
     let mut detail = Vec::new();
     if let Some(normal) = normal {
         detail.push(DetailLine {
-            label: crate::i18n::s().topped_up.to_string(),
+            label: if single {
+                ui.balance.to_string()
+            } else {
+                ui.topped_up.to_string()
+            },
             value: format_money(normal, currency),
             reset: None,
         });
     }
     if let Some(bonus) = bonus {
         detail.push(DetailLine {
-            label: crate::i18n::s().bonus.to_string(),
+            label: if single {
+                ui.balance.to_string()
+            } else {
+                ui.bonus.to_string()
+            },
             value: format_money(bonus, currency),
             reset: None,
         });
