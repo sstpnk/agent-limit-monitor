@@ -19,7 +19,7 @@ fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if let Ok(exe) = std::env::current_exe() {
-        let marker = exe.with_extension("new.update");
+        let marker = update_marker_path(&exe);
         if let Ok(content) = std::fs::read_to_string(&marker) {
             let mut lines = content.lines();
             if let (Some(target), Some(pid)) = (
@@ -60,4 +60,34 @@ fn main() {
         diagnose::log("entering window::run");
     }
     window::run();
+}
+
+fn update_marker_path(exe: &std::path::Path) -> std::path::PathBuf {
+    let Some(stem) = exe.file_stem().and_then(|stem| stem.to_str()) else {
+        return exe.with_extension("new.update");
+    };
+
+    if let Some(original_stem) = stem.strip_suffix(".new") {
+        return exe.with_file_name(format!("{original_stem}.new.update"));
+    }
+
+    exe.with_extension("new.update")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::update_marker_path;
+    use std::path::Path;
+
+    #[test]
+    fn installer_and_downloaded_exe_share_the_same_marker() {
+        assert_eq!(
+            update_marker_path(Path::new(r"C:\Apps\agent-limit-monitor.exe")),
+            Path::new(r"C:\Apps\agent-limit-monitor.new.update")
+        );
+        assert_eq!(
+            update_marker_path(Path::new(r"C:\Apps\agent-limit-monitor.new.exe")),
+            Path::new(r"C:\Apps\agent-limit-monitor.new.update")
+        );
+    }
 }
