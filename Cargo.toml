@@ -1,6 +1,6 @@
 [package]
 name = "agent-limit-monitor"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 license = "MIT"
 description = "Compact Windows taskbar widget for ChatGPT, Z.AI, DeepSeek, Claude, Antigravity and Copilot limits"
@@ -41,9 +41,6 @@ features = [
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_UI_HiDpi",
 ]
-
-[build-dependencies]
-winresource = "0.1.31"
 
 [profile.release]
 opt-level = "z"

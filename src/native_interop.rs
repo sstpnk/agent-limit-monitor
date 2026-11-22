@@ -1,4 +1,3 @@
-use windows::core::PCWSTR;
 use windows::Win32::Foundation::{BOOL, HWND, LPARAM, RECT};
 use windows::Win32::UI::Shell::{SHAppBarMessage, ABM_GETTASKBARPOS, APPBARDATA};
 use windows::Win32::UI::WindowsAndMessaging::*;
@@ -55,20 +54,38 @@ pub fn find_taskbars() -> Vec<TaskbarWindow> {
     taskbars
 }
 
-/// Find a child window by class name
-pub fn find_child_window(parent: HWND, class_name: &str) -> Option<HWND> {
-    unsafe {
-        let class = wide_str(class_name);
-        match FindWindowExW(
-            parent,
-            HWND::default(),
-            PCWSTR::from_raw(class.as_ptr()),
-            PCWSTR::null(),
-        ) {
-            Ok(h) if h != HWND::default() => Some(h),
-            _ => None,
-        }
+/// Find a descendant window by class name.  Windows 11 nests the notification
+/// area below several implementation windows, so looking only at direct
+/// children of `Shell_TrayWnd` is not reliable.
+pub fn find_descendant_window(parent: HWND, class_name: &str) -> Option<HWND> {
+    struct Search<'a> {
+        class_name: &'a str,
+        found: Option<HWND>,
     }
+
+    unsafe extern "system" fn enum_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
+        let search = unsafe { &mut *(lparam.0 as *mut Search<'_>) };
+        let mut name = [0u16; 64];
+        let len = unsafe { GetClassNameW(hwnd, &mut name) };
+        if len > 0 && String::from_utf16_lossy(&name[..len as usize]) == search.class_name {
+            search.found = Some(hwnd);
+            return BOOL(0);
+        }
+        BOOL(1)
+    }
+
+    let mut search = Search {
+        class_name,
+        found: None,
+    };
+    unsafe {
+        let _ = EnumChildWindows(
+            parent,
+            Some(enum_proc),
+            LPARAM(&mut search as *mut _ as isize),
+        );
+    }
+    search.found
 }
 
 /// Get taskbar position via SHAppBarMessage

@@ -522,12 +522,7 @@ fn position_window() {
             return;
         }
     };
-    let mut tray_left = taskbar_rect.right;
-    if let Some(tray_hwnd) = native_interop::find_child_window(taskbar_hwnd, "TrayNotifyWnd") {
-        if let Some(tray_rect) = native_interop::get_window_rect_safe(tray_hwnd) {
-            tray_left = tray_rect.left;
-        }
-    }
+    let tray_left = taskbar_tray_left(taskbar_hwnd, taskbar_rect);
     let max_offset = (tray_left - taskbar_rect.left - width).max(0);
     let offset = offset.clamp(0, max_offset);
     let changed = {
@@ -555,6 +550,13 @@ fn position_window() {
     native_interop::move_window(hwnd, x, y - taskbar_rect.top, width, height);
 }
 
+fn taskbar_tray_left(taskbar_hwnd: HWND, taskbar_rect: RECT) -> i32 {
+    native_interop::find_descendant_window(taskbar_hwnd, "TrayNotifyWnd")
+        .and_then(native_interop::get_window_rect_safe)
+        .map(|tray_rect| tray_rect.left.clamp(taskbar_rect.left, taskbar_rect.right))
+        .unwrap_or(taskbar_rect.right)
+}
+
 /// Fallback when Windows refuses SetParent: overlay the taskbar exactly where
 /// the child widget would sit, immediately left of the notification area.
 fn position_taskbar_overlay(
@@ -569,12 +571,7 @@ fn position_taskbar_overlay(
     else {
         return;
     };
-    let mut tray_left = taskbar_rect.right;
-    if let Some(tray) = native_interop::find_child_window(taskbar_hwnd, "TrayNotifyWnd") {
-        if let Some(rect) = native_interop::get_window_rect_safe(tray) {
-            tray_left = rect.left;
-        }
-    }
+    let tray_left = taskbar_tray_left(taskbar_hwnd, taskbar_rect);
     let max_offset = (tray_left - taskbar_rect.left - width).max(0);
     let offset = offset.clamp(0, max_offset);
     let changed = if let Some(state) = lock_state().as_mut() {
@@ -750,7 +747,7 @@ fn tray_summary() -> String {
 
 fn render_widget() {
     refresh_dpi();
-    let (hwnd, is_dark, readings, config, embedded) = {
+    let (hwnd, is_dark, readings, config) = {
         let state = lock_state();
         let Some(state) = state.as_ref() else {
             return;
@@ -760,7 +757,6 @@ fn render_widget() {
             state.is_dark,
             state.readings.clone(),
             state.config.clone(),
-            state.embedded,
         )
     };
 
@@ -822,8 +818,11 @@ fn render_widget() {
         let pixels = std::slice::from_raw_parts_mut(bits as *mut u32, (width * height) as usize);
         for pixel in pixels.iter_mut() {
             let rgb = *pixel & 0x00FF_FFFF;
-            *pixel = if embedded && rgb == bg_ref {
-                0x0100_0000
+            // Both the embedded window and the topmost fallback sit on the
+            // taskbar.  The background must therefore be fully transparent,
+            // not merely a near-transparent copy of a guessed taskbar color.
+            *pixel = if config.display.dock == "taskbar" && rgb == bg_ref {
+                0
             } else {
                 rgb | 0xFF00_0000
             };
@@ -1685,10 +1684,6 @@ unsafe extern "system" fn wnd_proc(
         }
         WM_LBUTTONDOWN => {
             hide_tooltip();
-            let x = (lparam.0 & 0xFFFF) as i16 as i32;
-            if x > sc(10) {
-                return LRESULT(0);
-            }
             let mut point = POINT::default();
             let _ = GetCursorPos(&mut point);
             if let Some(state) = lock_state().as_mut() {
@@ -1776,17 +1771,23 @@ fn drag_widget(hwnd: HWND) {
     let Some(taskbar_rect) = taskbar_rect else {
         return;
     };
-    let mut tray_left = taskbar_rect.right;
     if let Some(taskbar) = lock_state()
         .as_ref()
         .and_then(|state| state.taskbar_hwnd)
     {
-        if let Some(tray) = native_interop::find_child_window(taskbar, "TrayNotifyWnd") {
-            if let Some(rect) = native_interop::get_window_rect_safe(tray) {
-                tray_left = rect.left;
-            }
-        }
+        let tray_left = taskbar_tray_left(taskbar, taskbar_rect);
+        return drag_widget_to(hwnd, point, width, taskbar_rect, embedded, tray_left);
     }
+}
+
+fn drag_widget_to(
+    hwnd: HWND,
+    point: POINT,
+    width: i32,
+    taskbar_rect: RECT,
+    embedded: bool,
+    tray_left: i32,
+) {
     let max_offset = (tray_left - taskbar_rect.left - width).max(0);
     let (new_offset, height) = {
         let mut state = lock_state();
